@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function validRole() {
+      return request.resource.data.role in ['customer', 'vendor'];
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      // New signups write their own profile doc (doc id === auth uid)
+      allow create: if isOwner(userId) && validRole();
+      allow update: if isOwner(userId) && validRole();
+
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /vendors/{vendorId} {
+      allow read: if resource.data.status == 'verified'
+        || isOwner(vendorId);
+      allow create: if isOwner(vendorId)
+        && request.resource.data.status == 'pending';
+      allow update: if isOwner(vendorId)
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'pending';
+    }
+
+    match /woodTypes/{woodTypeId} {
+      allow read: if true;
+      allow create, update: if true;
+    }
+
+    match /orders/{orderId} {
+      allow read: if isSignedIn()
+        && resource.data.customerUid == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.status == 'requested';
+      allow update: if isSignedIn()
+        && resource.data.customerUid == request.auth.uid
+        && request.resource.data.customerUid == resource.data.customerUid;
+    }
+
+    match /quotes/{quoteId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+  }
+}

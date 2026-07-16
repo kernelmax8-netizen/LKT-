@@ -1,15 +1,20 @@
-import { Link } from 'react-router-dom';
-import { Bell, ChevronDown } from 'lucide-react';
-import LogoIcon from '../LogoIcon';
+import { Link } from 'react-router-dom'
+import { Bell, ChevronDown, LogOut } from 'lucide-react'
+import LogoIcon from '../LogoIcon'
+import { useAuth } from '../../context/AuthContext'
 
 const appLinks = [
   { label: 'Dashboard', href: '/book-lakdi' },
   { label: 'My Orders', href: '#orders' },
   { label: 'My Quotations', href: '#quotations' },
   { label: 'My Addresses', href: '#addresses' },
-];
+]
 
 export default function AppNavbar() {
+  const { profile, signOut } = useAuth()
+  const firstName = profile?.name?.split(' ')[0] || 'User'
+  const initial = firstName.charAt(0).toUpperCase()
+
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -45,16 +50,24 @@ export default function AppNavbar() {
               <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-brand-orange" />
             </button>
 
-            <button type="button" className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-brand-green/15 text-brand-green flex items-center justify-center text-xs font-bold flex-shrink-0">
-                R
+                {initial}
               </div>
-              <span className="hidden sm:block text-sm font-medium text-gray-700">Hi, Rahul</span>
+              <span className="hidden sm:block text-sm font-medium text-gray-700">Hi, {firstName}</span>
               <ChevronDown size={14} className="hidden sm:block text-gray-400" />
-            </button>
+              <button
+                type="button"
+                onClick={() => signOut()}
+                className="ml-1 p-1.5 rounded-full text-gray-400 hover:text-brand-green hover:bg-gray-100"
+                title="Sign out"
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </nav>
-  );
+  )
 }

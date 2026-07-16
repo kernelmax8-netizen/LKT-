@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Star, ArrowLeft, ArrowRight, ShieldCheck, Check } from 'lucide-react';
-import { vendors, totalAmount } from '../../data/vendors';
-import VendorAvatar from '../../components/booking/VendorAvatar';
-import OrderSummaryCard from '../../components/booking/OrderSummaryCard';
-import NeedHelpCard from '../../components/booking/NeedHelpCard';
+import { useState } from 'react'
+import { Star, ArrowLeft, ArrowRight, ShieldCheck, Check } from 'lucide-react'
+import { quoteToVendorView } from '../../services/orderService'
+import { totalAmount } from '../../services/catalogService'
+import VendorAvatar from '../../components/booking/VendorAvatar'
+import OrderSummaryCard from '../../components/booking/OrderSummaryCard'
+import NeedHelpCard from '../../components/booking/NeedHelpCard'
 
 const trustPoints = [
   'Quality assured wood',
@@ -11,16 +12,32 @@ const trustPoints = [
   'No hidden charges',
   'Safe & secure transactions',
   'Rated by real customers',
-];
+]
 
-export default function Step4ChooseVendor({ order, updateOrder, onNext, onPrevious, onEditStep1 }) {
-  const [selected, setSelected] = useState(order.selectedVendorId || vendors.find((v) => v.recommended)?.id);
-  const quantity = Number(order.quantity) || 1;
+export default function Step4ChooseVendor({
+  order,
+  updateOrder,
+  onNext,
+  onPrevious,
+  onEditStep1,
+  quotes = [],
+  onAcceptQuote,
+}) {
+  const vendors = quotes.map(quoteToVendorView)
+  const [selected, setSelected] = useState(
+    order.selectedVendorId || vendors.find((v) => v.recommended)?.id || vendors[0]?.id,
+  )
+  const quantity = Number(order.quantity) || 1
 
-  const handleNext = () => {
-    updateOrder({ selectedVendorId: selected });
-    onNext();
-  };
+  const handleNext = async () => {
+    const vendor = vendors.find((v) => v.id === selected)
+    if (vendor?.quoteId && onAcceptQuote) {
+      await onAcceptQuote(vendor.id, vendor.quoteId)
+    } else {
+      updateOrder({ selectedVendorId: selected, selectedQuoteId: vendor?.quoteId })
+    }
+    onNext()
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -31,11 +48,11 @@ export default function Step4ChooseVendor({ order, updateOrder, onNext, onPrevio
 
           <div className="space-y-4">
             {vendors.map((v) => {
-              const total = totalAmount(v, quantity);
-              const isSelected = selected === v.id;
+              const total = v.total ?? totalAmount(v, quantity)
+              const isSelected = selected === v.id
               return (
                 <div
-                  key={v.id}
+                  key={v.quoteId || v.id}
                   className={`border rounded-xl overflow-hidden transition-colors ${
                     isSelected ? 'border-brand-green bg-brand-green/5' : 'border-[#F1E7D4]'
                   }`}
@@ -94,19 +111,10 @@ export default function Step4ChooseVendor({ order, updateOrder, onNext, onPrevio
                         <span>Vehicle: {v.vehicleType}</span>
                         <span>Payment: {v.payment}</span>
                       </div>
-                      <span className="text-xs font-semibold text-brand-green hover:underline">View Vendor Details</span>
                     </div>
-
-                    {v.recommended && (
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-brand-green/20">
-                        <p className="text-xs font-semibold text-brand-green">
-                          Best Overall Offer — Lowest delivery time with great price
-                        </p>
-                      </div>
-                    )}
                   </button>
                 </div>
-              );
+              )
             })}
           </div>
 
@@ -158,5 +166,5 @@ export default function Step4ChooseVendor({ order, updateOrder, onNext, onPrevio
         <NeedHelpCard />
       </aside>
     </div>
-  );
+  )
 }

@@ -31,7 +31,7 @@ const quickLinks = [
 
 const vendorLinks = [
   { label: 'Join as Vendor', href: '/vendor-onboarding' },
-  { label: 'Vendor Login', href: '#login' },
+  { label: 'Vendor Login', href: '/login?role=vendor' },
   { label: 'Vendor Guide', href: '#guide' },
 ];
 
