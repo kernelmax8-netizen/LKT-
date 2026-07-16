@@ -11,6 +11,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!auth) {
+      // Firebase isn't configured on this deployment (missing env vars) -
+      // skip auth wiring instead of crashing so the rest of the app still
+      // renders. See src/lib/firebase.js.
+      setLoading(false)
+      return
+    }
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
       if (firebaseUser) {

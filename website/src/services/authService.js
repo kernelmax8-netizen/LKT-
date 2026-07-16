@@ -7,9 +7,22 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { auth, db, firebaseConfigured } from '../lib/firebase'
+
+// Every exported function below that talks to Firebase calls this first, so
+// a deployment missing the VITE_FIREBASE_* env vars fails with one clear,
+// actionable message instead of a cryptic TypeError (auth/db are `null` in
+// that case - see src/lib/firebase.js).
+function assertFirebaseReady() {
+  if (!firebaseConfigured || !auth || !db) {
+    throw new Error(
+      'Sign-in is not configured for this deployment. Add the VITE_FIREBASE_* environment variables and redeploy.',
+    )
+  }
+}
 
 export async function getUserProfile(uid) {
+  assertFirebaseReady()
   const snap = await getDoc(doc(db, 'users', uid))
   return snap.exists() ? { uid, ...snap.data() } : null
 }
@@ -54,6 +67,7 @@ export function toE164PhoneNumber(rawPhone) {
  * after the container node exists in the DOM.
  */
 export function createRecaptchaVerifier(containerId) {
+  assertFirebaseReady()
   return new RecaptchaVerifier(auth, containerId, { size: 'invisible' })
 }
 
@@ -63,6 +77,7 @@ export function createRecaptchaVerifier(containerId) {
  * the user receives.
  */
 export async function sendOtp(phoneNumber, appVerifier) {
+  assertFirebaseReady()
   return signInWithPhoneNumber(auth, phoneNumber, appVerifier)
 }
 
@@ -77,6 +92,7 @@ export async function sendOtp(phoneNumber, appVerifier) {
  * the existing profile untouched.
  */
 export async function verifyOtp(confirmationResult, code, profileDefaults = {}) {
+  assertFirebaseReady()
   const cred = await confirmationResult.confirm(code)
   await cred.user.getIdToken(true)
   if (profileDefaults.name && !cred.user.displayName) {
@@ -87,6 +103,7 @@ export async function verifyOtp(confirmationResult, code, profileDefaults = {}) 
 }
 
 export async function signUp({ email, password, name, phone = '', role = 'customer' }) {
+  assertFirebaseReady()
   const cred = await createUserWithEmailAndPassword(auth, email, password)
   // Ensure Auth token is attached before Firestore rules evaluate request.auth
   await cred.user.getIdToken(true)
@@ -104,11 +121,13 @@ export async function signUp({ email, password, name, phone = '', role = 'custom
 }
 
 export async function signIn({ email, password }) {
+  assertFirebaseReady()
   const cred = await signInWithEmailAndPassword(auth, email, password)
   const profile = await ensureUserProfile(cred.user)
   return { user: cred.user, profile }
 }
 
 export async function signOut() {
+  if (!auth) return
   await firebaseSignOut(auth)
 }
